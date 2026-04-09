@@ -1,0 +1,23 @@
+TRANSFORMER FAULT TYPES AND DIAGNOSIS GUIDE
+
+1. INSULATION BREAKDOWN
+Transformer insulation degrades due to thermal aging (oil_temp consistently >75°C), moisture ingress, voltage surges, and partial discharge. Early symptoms include rising THD (>4%), increasing oil temperature trend, and power factor degradation below 0.85. Progressive insulation breakdown leads to inter-winding short circuits and catastrophic failure within 48-72 hours of reaching critical thresholds.
+
+CEA/Indian DISCOM threshold: Oil temperature >85°C = immediate danger zone. Dielectric strength of transformer oil should be >30 kV (ASTM D1816). IEC 60567 dissolved gas analysis showing acetylene >5 ppm indicates arcing faults. Hydrogen >100 ppm indicates partial discharge.
+
+2. OVERLOADING PATTERNS
+Overloaded transformers show all three phase currents elevated (Ia/Ib/Ic >120% of rated), oil temperature rising steadily, and active power (kW) exceeding nameplate capacity. Current phase imbalance ratio = (max(Ia,Ib,Ic) - min(Ia,Ib,Ic)) / avg(Ia,Ib,Ic) > 0.3 indicates dangerous load imbalance. Sustained overloading accelerates insulation aging by factor of 2 per 8°C above 65°C (Montsinger rule). A 100 kVA transformer running at 150% load at 80°C ambient has expected life of under 2 years.
+
+3. PHASE IMBALANCE
+Phase voltage imbalance >2% causes increased copper losses, negative sequence currents, and derating requirement. Detection: |Va-Vb|/avg_voltage > 0.02 or |Ia-Ib|/avg_current > 0.30. Root causes include single-phase loads concentrated on one phase and blown fuses on capacitor banks. Phase imbalance ratio above 0.3 triggers WARNING alert in GridSense AI.
+
+4. HARMONIC INJECTION (HIGH THD)
+THD >5% indicates significant non-linear loads such as VFDs, UPS systems, and EV chargers. High THD causes additional copper losses proportional to frequency squared, transformer derating (K-factor loading), and interference with protection relays. IEEE 519-2022 limits THD <5% at point of common coupling. Indian urban feeders routinely see 6-12% THD due to inverter-based AC proliferation. THD >8% triggers CRITICAL alert in GridSense.
+
+5. OIL TEMPERATURE FAILURE CURVE
+Normal operating oil temperature: 50-65°C. Warning threshold: 75-85°C. Critical threshold: >85°C. Immediate shutdown: >90°C. Above 90°C, paper insulation carbonizes at an exponential rate. Expected transformer life: 65°C = 20 years; 80°C = 8 years; 95°C = 2 years. Cooling system failures (blocked radiators, pump failure, low oil level) are primary causes of sudden oil temperature spikes.
+
+ANOMALY SCORE INTERPRETATION
+- 0.00-0.75: NORMAL — scheduled monitoring
+- 0.75-0.90: WARNING — inspection within 48 hours
+- 0.90+: CRITICAL — immediate response, potential failure within 72 hours

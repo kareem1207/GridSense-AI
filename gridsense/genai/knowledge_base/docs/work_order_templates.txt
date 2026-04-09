@@ -1,0 +1,44 @@
+WORK ORDER TEMPLATES - GRIDSENSE AI FIELD OPERATIONS
+
+STANDARD WORK ORDER FIELDS
+Required: transformer_id, fault_type, severity, evidence, recommended_action, tools_needed, estimated_repair_hours, priority
+
+P1 HIGH PRIORITY TEMPLATE (CRITICAL - immediate dispatch)
+transformer_id: T-047
+fault_type: Transformer Overheating and Insulation Degradation
+severity: CRITICAL
+evidence: Oil temperature 87 degrees C exceeding threshold of 85 degrees C. EWMA anomaly score 0.92 indicating imminent failure. THD elevated at 6.8%. Rising oil temperature trend projected to reach 90 degrees C within 8 hours.
+recommended_action: 1. Dispatch field team immediately within 1 hour. 2. Apply LOTO procedure. 3. Perform emergency oil cooling or controlled load shedding to alternate feeder. 4. Collect oil sample for DGA testing. 5. Thermal imaging of all HV/LV bushings. 6. Insulation resistance test with 5kV Megger. 7. Document all findings.
+tools_needed: Thermal infrared camera, oil sampling kit, insulation tester 5kV, multimeter, LOTO equipment, arc flash PPE
+estimated_repair_hours: 8.0
+priority: HIGH
+
+P2 MEDIUM PRIORITY TEMPLATE (WARNING - scheduled within 48h)
+transformer_id: T-023
+fault_type: Phase Current Imbalance and Overloading
+severity: WARNING
+evidence: Phase imbalance ratio 0.35 exceeding threshold of 0.30. Phase currents Ia=78A Ib=45A Ic=42A showing severe Phase A overloading. EWMA anomaly score 0.82. Consistent single-phase overloading pattern over last 6 hours.
+recommended_action: 1. Schedule inspection within 48 hours. 2. Conduct consumer load survey on Phase A. 3. Redistribute single-phase loads across phases. 4. Check capacitor bank condition on Phase A. 5. Verify top 10 consumer meter readings for billing accuracy.
+tools_needed: Clamp meter, multimeter, load survey recording sheet, capacitor bank test equipment
+estimated_repair_hours: 4.0
+priority: MEDIUM
+
+P3 LOW PRIORITY TEMPLATE (monitoring - schedule within 7 days)
+transformer_id: T-012
+fault_type: Elevated THD and Power Factor Degradation
+severity: WARNING
+evidence: THD 5.8% exceeding IEEE 519 threshold of 5%. Power factor 0.83 below minimum 0.85 requirement. EWMA anomaly score 0.77. Likely caused by proliferation of VFD and inverter-based AC loads in service area.
+recommended_action: 1. Identify non-linear loads in service area via consumer audit. 2. Evaluate installation of passive harmonic filter on LV bus. 3. Coordinate with large commercial consumers regarding power quality compliance. 4. Verify capacitor bank automatic switching is functional.
+tools_needed: Power quality analyzer, harmonic spectrum analyzer, capacitor bank test kit
+estimated_repair_hours: 2.0
+priority: LOW
+
+NTL DETECTION WORK ORDER
+transformer_id: T-047
+fault_type: Non-Technical Loss and Electricity Theft
+severity: WARNING
+evidence: Meter M-04702 shows 90% drop in active power consumption from 3.2 kW to 0.3 kW. tamper_flag=True indicating physical seal breach. Consumption drop of 91% far exceeds 40% NTL detection threshold. Suspected direct phase bypass.
+recommended_action: 1. Immediate physical inspection of meter M-04702 within 24 hours. 2. Check for external bypass wiring or jumper connections. 3. Verify integrity of all meter seals and terminal cover. 4. Conduct clamp meter load survey on service connection. 5. Compare feeder current against sum of consumer meter readings. 6. File FIR under Section 135 of Indian Electricity Act 2003 if theft confirmed. 7. Replace with anti-tamper DLMS smart meter.
+tools_needed: Clamp meter, digital camera for evidence documentation, seal inspection kit, multimeter
+estimated_repair_hours: 3.0
+priority: HIGH

@@ -1,0 +1,43 @@
+TRANSFORMER MAINTENANCE PROCEDURES - GRIDSENSE AI FIELD GUIDE
+
+PRIORITY CLASSIFICATION
+P1 (HIGH - CRITICAL, ewma_score > 0.90): Immediate response, 4-hour SLA
+P2 (MEDIUM - WARNING, ewma_score 0.75-0.90): Scheduled inspection, 48-hour SLA
+P3 (LOW - MONITORING, ewma_score < 0.75): Monthly patrol inspection
+
+P1 CRITICAL RESPONSE PROCEDURE
+1. Dispatch field team immediately (minimum 2 engineers)
+2. SAFETY FIRST: Lockout/Tagout (LOTO) per IE Rules 1956. Verify dead with voltage tester before touching.
+3. PPE required: Rubber insulating gloves Class 2 (rated 11kV), arc flash suit (8 cal/cm2 minimum), safety glasses, dielectric safety shoes
+4. Visual inspection: check for oil leaks, burn marks, unusual odor (burnt insulation smell), unusual noise (humming, crackling, or hissing)
+5. Oil sampling: collect 500ml sample per IEC 60475 procedure. Send to lab for DGA (dissolved gas analysis per IEC 60567) and BDV test (breakdown voltage, IEC 60156)
+6. Thermal imaging: scan all HV/LV bushings, cable terminations, tap changer with IR camera. Temperature rise >10°C above ambient on any terminal = hot spot fault
+7. Winding resistance test: measure DC resistance with micro-ohmmeter, compare to nameplate values. Change >5% from baseline = winding fault
+8. Check Buchholz relay (if fitted): gas accumulation indicates internal fault
+9. If oil_temp >90°C: immediate load shedding or controlled transfer to alternate source
+10. Document all findings with photographs for insurance/regulatory records
+
+P2 WARNING RESPONSE PROCEDURE
+1. Schedule inspection within 48 hours during off-peak load period
+2. Download trend data from GridSense dashboard: last 72h readings
+3. Check radiator fins for dust/debris blockage; clean if blocked
+4. Check conservator oil level and breather silica gel condition
+5. Insulation resistance test: Megger 5kV for 10 minutes. PI (polarization index) ratio should be >2.0. PI < 1.5 = moisture/contamination
+6. Load balancing: redistribute single-phase loads across phases if phase imbalance ratio >0.30
+7. THD mitigation: if thd_pct >8%, investigate customer loads for VFDs, UPS, EV chargers; consider passive harmonic filter
+
+P3 ROUTINE MAINTENANCE
+Monthly: visual inspection, oil level check, IR thermography patrol
+Annual: complete maintenance per BIS 1553 / IEC 60076
+5-year: full oil regeneration or replacement, tap changer servicing
+
+REQUIRED TOOLS
+- Thermal infrared camera (resolution <0.1°C, range up to 350°C)
+- Portable oil BDV tester (IEC 60156)
+- Insulation resistance tester / Megger (5kV DC)
+- Micro-ohmmeter for winding resistance (resolution 0.1 mohm)
+- Clamp meter (current measurement without circuit disconnection)
+- Digital multimeter with AC/DC voltage and frequency measurement
+- Combustible gas detector (hydrogen, acetylene)
+- Oil sampling kit (clean glass bottles, syringes, labels)
+- LOTO equipment (padlocks, tags, barriers)

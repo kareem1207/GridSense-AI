@@ -1,0 +1,31 @@
+NON-TECHNICAL LOSS (NTL) DETECTION GUIDE
+
+DEFINITION
+Non-Technical Losses (NTL) include electricity theft, meter tampering, billing errors, and unbilled consumption. In India, NTL accounts for 15-25% of distribution losses in some DISCOMs, totaling over Rs. 25,000 crore annually. GridSense AI monitors smart meter data to flag suspicious consumption patterns in real time.
+
+DETECTION SIGNATURES
+
+1. SUDDEN CONSUMPTION DROP (Primary Indicator)
+A consumption drop >40% from the trailing average without a corresponding weather event, holiday, or load disconnection notice indicates possible meter bypass. The GridSense NTL algorithm flags: (prev_avg - current_reading) / prev_avg > 0.40 as a tamper event.
+
+2. METER M-04702 PATTERN - DIRECT BYPASS
+Meter M-04702 exhibits a 90% drop in active_power_kw. This matches the signature of a direct phase bypass where a jumper wire connects the supply phase directly to the consumer panel, completely bypassing the meter. The tamper_flag sensor triggers when meter terminal seals are broken or magnetic interference is detected.
+
+3. TAMPER FLAG (tamper_flag = True)
+Physical meter seal breach has been detected by the meter hardware. Possible causes include reverse metering, current transformer shorting, display manipulation, and remote bypass using magnetic interference. Requires immediate physical field inspection within 24 hours.
+
+4. PHASE CURRENT ANOMALY ON FEEDER
+If transformer phase currents (Ia/Ib/Ic) show a sudden spike but individual smart meter readings show low or normal consumption, energy is being consumed without billing. This discrepancy between feeder current and billed consumption is a strong NTL indicator.
+
+5. LOAD FACTOR ANOMALY
+Normal residential load factor: 0.25-0.45. Commercial: 0.50-0.70. A load factor below 0.15 combined with tamper_flag=True strongly suggests electricity theft.
+
+RECOMMENDED ACTIONS
+- Physical meter inspection within 24 hours of flag
+- Verify meter seal integrity and terminal wiring
+- Conduct load survey using clamp meter on service connection
+- Check for jumper wires or bypass connections on meter terminals
+- Compare meter readings against feeder CT measurements
+- File FIR if confirmed theft (Section 135, Indian Electricity Act 2003)
+- Replace meter with DLMS-compliant anti-tamper smart meter
+- Estimated recovery: Rs. 2,000-15,000 per month per flagged consumer

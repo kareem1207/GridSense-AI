@@ -1,0 +1,38 @@
+DISTRIBUTION TRANSFORMER ANOMALY THRESHOLDS - INDIAN DISCOM STANDARDS
+
+VOLTAGE PARAMETERS (CEA Regulations 2005, amended 2010)
+Nominal voltage: 230V single phase, 400V three phase LV
+Acceptable range: +/-6% giving 216V to 244V (single phase)
+Under-voltage fault: below 200V sustained for more than 30 seconds
+Over-voltage fault: above 264V sustained for more than 30 seconds
+Phase voltage imbalance: less than 2% acceptable; 2-5% investigate; above 5% urgent action required
+
+CURRENT PARAMETERS
+Balanced phase current: Ia approximately equal to Ib approximately equal to Ic (within 10% of mean)
+Phase imbalance ratio = (max-min)/avg: below 0.10 normal; 0.10-0.30 monitor; above 0.30 critical action needed
+Overcurrent: above 120% of rated current triggers overload warning; above 150% requires immediate trip
+
+OIL TEMPERATURE (IS 1554 / IEC 60076-7)
+Top oil temperature rise: maximum 60°C above ambient (approximately 95°C at 35°C Indian ambient)
+Winding temperature rise: maximum 65°C for ONAN cooling class
+Operating target for maximum transformer life: oil_temp at or below 70°C
+Warning threshold: oil_temp above 80°C
+Critical threshold: oil_temp above 85°C
+Emergency shutdown required: oil_temp above 90°C
+
+POWER QUALITY THRESHOLDS
+Total Harmonic Distortion (THD): below 5% acceptable per IEEE 519-2022
+THD 5-8%: elevated, monitor and investigate non-linear load mix
+THD above 8%: high harmonic distortion, harmonic filter or load restriction needed
+Power factor target: above 0.90 (Indian Electricity Act requires minimum 0.85)
+Power factor below 0.85: reactive compensation via capacitor banks needed
+Power factor below 0.75: serious reactive power deficit, DISCOM may impose penalty tariff
+
+GRIDSENSE AI ANOMALY SCORE THRESHOLDS
+0.00 to 0.75: NORMAL (green indicator) - scheduled monitoring only
+0.75 to 0.90: WARNING (amber indicator) - field inspection within 48 hours
+0.90 to 1.00: CRITICAL (red indicator) - immediate response, predicted failure within 72 hours
+
+Score computation: 60% Isolation Forest point anomaly score + 40% LSTM temporal reconstruction error
+EWMA smoothing with span=12 applied to reduce false positives from transient spikes
+Hours-to-failure prediction uses LinearRegression on last 48 EWMA scores projected to 0.90 threshold
