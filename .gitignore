@@ -13,3 +13,4 @@ gridsense/data/synthetic/
 gridsense/ml/models/saved/
 
 start.sh
+.env
