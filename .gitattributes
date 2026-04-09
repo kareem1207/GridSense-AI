@@ -1,8 +1,8 @@
-.csv filter=lfs diff=lfs merge=lfs -text
 .parquet filter=lfs diff=lfs merge=lfs -text
 .pkl filter=lfs diff=lfs merge=lfs -text
 .h5 filter=lfs diff=lfs merge=lfs -text
 .pt filter=lfs diff=lfs merge=lfs -text
 .gguf filter=lfs diff=lfs merge=lfs -text
 *.zip filter=lfs diff=lfs merge=lfs -text
+.csv filter=lfs diff=lfs merge=lfs -text
 gridsense/data/raw/sgcc-dataset/data[[:space:]]set.csv filter=lfs diff=lfs merge=lfs -text
