@@ -11,3 +11,5 @@ wheels/
 gridsense/data/raw/
 gridsense/data/synthetic/
 gridsense/ml/models/saved/
+
+start.sh
