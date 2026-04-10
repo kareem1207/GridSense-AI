@@ -85,6 +85,39 @@ class LocalLLMClient:
             )
             return self._fallback_response(user_prompt)
 
+    def generate_operator_report(self, title: str, facts: str) -> str:
+        """Generate a short plain-language operator report."""
+        system_prompt = (
+            "You write short field-operations reports for non-technical utility staff. "
+            "Use simple language, short sentences, and no markdown tables. "
+            "Explain what happened, why it matters, and what to do next."
+        )
+        user_prompt = (
+            f"Write a short operator report.\n"
+            f"Title: {title}\n"
+            f"Facts:\n{facts}\n\n"
+            "Output 3 short sections with headings: Situation, Why It Matters, Next Step."
+        )
+        try:
+            client = self._get_client()
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=400,
+            )
+            return response.choices[0].message.content or self._fallback_report(title, facts)
+        except Exception as exc:
+            logger.warning(
+                "LLM report generation unavailable (%s: %s). Using fallback report.",
+                type(exc).__name__,
+                str(exc)[:120],
+            )
+            return self._fallback_report(title, facts)
+
     def _fallback_response(self, user_prompt: str) -> str:
         """Return a deterministic JSON work-order template when the LLM is offline.
 
@@ -140,6 +173,15 @@ class LocalLLMClient:
                 "estimated_repair_hours": hours,
                 "priority": priority,
             }
+        )
+
+    def _fallback_report(self, title: str, facts: str) -> str:
+        """Return a simple operator-facing report when the LLM is offline."""
+        return (
+            f"Situation\n{title}\n\n"
+            f"Why It Matters\n{facts}\n\n"
+            "Next Step\nPlease inspect the affected asset, confirm the latest readings, "
+            "and dispatch the field team if the condition remains active."
         )
 
     def is_available(self) -> bool:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -13,6 +14,11 @@ from gridsense.db import store
 from gridsense.schemas.readings import TransformerReadingSchema, MeterReadingSchema
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "localhost")
@@ -40,6 +46,7 @@ class MQTTConsumer:
         self._client.on_message = self._on_message
         self._client.on_disconnect = self._on_disconnect
         self._running: bool = False
+        self._message_count: int = 0
 
     def _on_connect(
         self,
@@ -49,23 +56,12 @@ class MQTTConsumer:
         rc: int,
         properties: Any = None,
     ) -> None:
-        """Subscribe to transformer and meter reading topics on successful connect.
-
-        Args:
-            client: The MQTT client instance.
-            userdata: User-defined data (unused).
-            flags: Connection flags from broker.
-            rc: Return code (0 = success).
-            properties: MQTT v5 properties (optional).
-        """
         if rc == 0:
             client.subscribe("gridsense/transformers/+/readings", qos=1)
             client.subscribe("gridsense/meters/+/readings", qos=1)
-            logger.info(
-                "MQTTConsumer connected and subscribed to transformer and meter topics."
-            )
+            logger.info("Connected to broker at %s:%d — subscribed to all topics.", self._broker_host, self._broker_port)
         else:
-            logger.error("MQTTConsumer failed to connect, return code: %d", rc)
+            logger.error("Failed to connect to broker, return code: %d", rc)
 
     def _on_message(
         self,
@@ -73,21 +69,8 @@ class MQTTConsumer:
         userdata: Any,
         msg: mqtt.MQTTMessage,
     ) -> None:
-        """Parse and store an incoming MQTT message.
-
-        Routes transformer readings to TransformerReadingSchema and meter
-        readings to MeterReadingSchema, then writes to the in-memory store.
-
-        Args:
-            client: The MQTT client instance.
-            userdata: User-defined data (unused).
-            msg: The received MQTT message.
-        """
         try:
             topic_parts = msg.topic.split("/")
-            # Expected formats:
-            #   gridsense/transformers/<transformer_id>/readings  (4 parts)
-            #   gridsense/meters/<meter_id>/readings              (4 parts)
             if len(topic_parts) != 4:
                 logger.warning("Unexpected topic structure: %s", msg.topic)
                 return
@@ -98,13 +81,21 @@ class MQTTConsumer:
             if entity_type == "transformers":
                 schema = TransformerReadingSchema.model_validate(payload)
                 store.append_transformer_reading(schema.model_dump())
-                logger.debug(
-                    "Stored transformer reading for %s", schema.transformer_id
-                )
+                self._message_count += 1
+                if self._message_count % 100 == 0:
+                    logger.info(
+                        "Ingested %d messages | Transformers in store: %d | Meters: %d",
+                        self._message_count,
+                        len(store.STORE.get("transformer_readings", [])),
+                        len(store.STORE.get("meter_readings", [])),
+                    )
+                logger.debug("Stored transformer reading for %s", schema.transformer_id)
+
             elif entity_type == "meters":
                 schema = MeterReadingSchema.model_validate(payload)
                 store.append_meter_reading(schema.model_dump())
                 logger.debug("Stored meter reading for %s", schema.meter_id)
+
             else:
                 logger.warning("Unknown entity type in topic: %s", entity_type)
 
@@ -112,7 +103,10 @@ class MQTTConsumer:
             logger.error("Failed to decode JSON on topic %s: %s", msg.topic, exc)
         except Exception as exc:
             logger.error(
-                "Error processing message on topic %s: %s", msg.topic, exc, exc_info=True
+                "Error processing message on topic %s: %s",
+                msg.topic,
+                exc,
+                exc_info=True,
             )
 
     def _on_disconnect(
@@ -123,41 +117,41 @@ class MQTTConsumer:
         rc: int,
         properties: Any = None,
     ) -> None:
-        """Handle disconnection from the MQTT broker.
-
-        Args:
-            client: The MQTT client instance.
-            userdata: User-defined data (unused).
-            disconnect_flags: Disconnect flags.
-            rc: Return code.
-            properties: MQTT v5 properties (optional).
-        """
         self._running = False
-        logger.warning(
-            "MQTTConsumer disconnected from broker (rc=%d). Reconnect may be needed.", rc
-        )
+        if rc != 0:
+            logger.warning("Unexpected disconnection (rc=%d). Will attempt reconnect...", rc)
 
     def start(self) -> None:
-        """Connect to the MQTT broker and start the background network loop."""
+        """Connect to broker and start background loop thread (non-blocking)."""
         self._client.connect(self._broker_host, self._broker_port)
         self._client.loop_start()
         self._running = True
-        logger.info(
-            "MQTTConsumer started, connected to %s:%d",
-            self._broker_host,
-            self._broker_port,
-        )
+        logger.info("MQTTConsumer started (background thread).")
+
+    def start_blocking(self) -> None:
+        """Connect to broker and block forever — use when running as __main__."""
+        logger.info("Connecting to broker at %s:%d ...", self._broker_host, self._broker_port)
+        self._client.connect(self._broker_host, self._broker_port)
+        self._running = True
+        logger.info("MQTTConsumer running — press Ctrl+C to stop.")
+        try:
+            # loop_forever blocks the main thread and handles reconnects automatically
+            self._client.loop_forever(retry_first_connection=True)
+        except KeyboardInterrupt:
+            logger.info("Keyboard interrupt received — shutting down consumer.")
+        finally:
+            self.stop()
 
     def stop(self) -> None:
-        """Stop the network loop and disconnect from the broker."""
+        """Stop the network loop and disconnect cleanly."""
         self._client.loop_stop()
         self._client.disconnect()
         self._running = False
-        logger.info("MQTTConsumer stopped.")
+        logger.info("MQTTConsumer stopped. Total messages ingested: %d", self._message_count)
 
 
 def start_consumer() -> MQTTConsumer:
-    """Create, start, and return an MQTTConsumer instance.
+    """Create, start, and return an MQTTConsumer (non-blocking — for use in threads).
 
     Returns:
         A running MQTTConsumer connected to the configured broker.
@@ -165,3 +159,10 @@ def start_consumer() -> MQTTConsumer:
     consumer = MQTTConsumer()
     consumer.start()
     return consumer
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Starting GridSense MQTT ingestion consumer...")
+    consumer = MQTTConsumer()
+    consumer.start_blocking()

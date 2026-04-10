@@ -72,6 +72,18 @@ def test_local_llm_is_available_returns_false_when_unreachable():
     assert client.is_available() is False
 
 
+def test_local_llm_operator_report_fallback_is_non_empty():
+    """Operator report fallback should return readable text when the LLM is down."""
+    client = LocalLLMClient(base_url="http://127.0.0.1:19999/v1")
+    result = client.generate_operator_report(
+        title="Meter tamper suspected on T-047",
+        facts="Meter M-04702 sent a tamper signal and its usage dropped sharply.",
+    )
+    assert isinstance(result, str)
+    assert "Situation" in result
+    assert "Next Step" in result
+
+
 # ---------------------------------------------------------------------------
 # DiagnosisAgent tests (always run — uses mocked LLM)
 # ---------------------------------------------------------------------------

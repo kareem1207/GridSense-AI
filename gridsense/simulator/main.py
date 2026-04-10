@@ -21,15 +21,24 @@ N_TRANSFORMERS = int(os.getenv("N_TRANSFORMERS", "100"))
 METERS_PER_TRANSFORMER = int(os.getenv("METERS_PER_TRANSFORMER", "50"))
 DEGRADING_IDS_RAW = os.getenv("DEGRADING_TRANSFORMERS", "T-047,T-023")
 DEGRADING_TRANSFORMERS: list[str] = [x.strip() for x in DEGRADING_IDS_RAW.split(",")]
-THEFT_METER = os.getenv("THEFT_METER", "M-04702")
+WARNING_IDS_RAW = os.getenv("WARNING_TRANSFORMERS", "T-023,T-047,T-088")
+CRITICAL_IDS_RAW = os.getenv("CRITICAL_TRANSFORMERS", "T-011,T-035")
+SPIKY_IDS_RAW = os.getenv("SPIKY_TRANSFORMERS", "T-062,T-073")
+THEFT_METERS_RAW = os.getenv("THEFT_METERS", "M-04702,M-03514,M-08821")
+THEFT_START_STEP = int(os.getenv("THEFT_START_STEP", "8"))
+WARNING_TRANSFORMERS: set[str] = {x.strip() for x in WARNING_IDS_RAW.split(",") if x.strip()}
+CRITICAL_TRANSFORMERS: set[str] = {x.strip() for x in CRITICAL_IDS_RAW.split(",") if x.strip()}
+SPIKY_TRANSFORMERS: set[str] = {x.strip() for x in SPIKY_IDS_RAW.split(",") if x.strip()}
+THEFT_METERS: set[str] = {x.strip() for x in THEFT_METERS_RAW.split(",") if x.strip()}
 
 
 class GridSimulator:
     """Simulates DTM and smart meter data for 100 transformers and 5000 meters.
 
     Publishes readings over MQTT to the GridSense ingestion layer.
-    Certain transformers are marked as degrading to exercise the ML pipeline.
-    One meter is designated as a theft meter to exercise theft detection.
+    Several transformers are placed into warning, critical, and spiky-fault
+    scenarios so the dashboard exercises the ML, alerting, and work-order flows.
+    A few smart meters are marked as theft cases to exercise NTL detection.
     """
 
     def __init__(
@@ -95,7 +104,7 @@ class GridSimulator:
             Dict with all 13 DTM fields plus timestamp as ISO string.
         """
         timestep = self._state[transformer_id]["timestep"]
-        is_degrading = transformer_id in DEGRADING_TRANSFORMERS
+        scenario = self._scenario_for(transformer_id)
 
         # Base readings drawn from normal distributions
         Va = float(np.random.normal(230.0, 2.0))
@@ -111,10 +120,52 @@ class GridSimulator:
         reactive_power_kvar = float(np.random.normal(40.0, 5.0))
         tamper_flag = False
 
-        if is_degrading:
-            # Progressive degradation: oil temperature rises, THD increases,
-            # power factor drops, and voltage sags slightly over time.
-            drift = min(timestep * 0.05, 20.0)
+        if scenario == "warning":
+            # Moderate thermal and harmonic stress that should graduate into warnings.
+            drift = min(timestep * 0.25, 18.0)
+            oil_temp += 8.0 + drift + float(np.random.normal(0, 1.2))
+            thd_pct += 2.0 + drift * 0.45 + float(np.random.normal(0, 0.5))
+            power_factor -= 0.05 + drift * 0.008 + float(np.random.normal(0, 0.008))
+            Va -= 2.0 + drift * 0.35 + float(np.random.normal(0, 0.7))
+            Vb -= 3.0 + drift * 0.35 + float(np.random.normal(0, 0.7))
+            Vc -= 1.0 + drift * 0.35 + float(np.random.normal(0, 0.7))
+            Ia += 8.0 + drift * 0.25 + float(np.random.normal(0, 1.0))
+            Ib += 6.0 + drift * 0.25 + float(np.random.normal(0, 1.0))
+            Ic += 7.0 + drift * 0.25 + float(np.random.normal(0, 1.0))
+            active_power_kw += 10.0 + drift * 0.8
+            reactive_power_kvar += 5.0 + drift * 0.35
+        elif scenario == "critical":
+            # Strong degradation to push the model into CRITICAL territory quickly.
+            drift = min(timestep * 0.6, 40.0)
+            oil_temp += 16.0 + drift * 1.4 + float(np.random.normal(0, 1.8))
+            thd_pct += 5.0 + drift * 0.8 + float(np.random.normal(0, 0.8))
+            power_factor -= 0.10 + drift * 0.012 + float(np.random.normal(0, 0.01))
+            Va -= 6.0 + drift * 0.55 + float(np.random.normal(0, 1.0))
+            Vb -= 7.0 + drift * 0.55 + float(np.random.normal(0, 1.0))
+            Vc -= 5.0 + drift * 0.55 + float(np.random.normal(0, 1.0))
+            Ia += 18.0 + drift * 0.7 + float(np.random.normal(0, 1.5))
+            Ib += 16.0 + drift * 0.7 + float(np.random.normal(0, 1.5))
+            Ic += 20.0 + drift * 0.7 + float(np.random.normal(0, 1.5))
+            active_power_kw += 25.0 + drift * 1.1
+            reactive_power_kvar += 12.0 + drift * 0.5
+        elif scenario == "spiky":
+            # Intermittent instability: bursts of distortion, temperature, and current imbalance.
+            spike = 0.0
+            if timestep % 6 in {2, 3}:
+                spike = 14.0 + float(np.random.normal(0, 1.2))
+            oil_temp += 3.0 + spike * 0.7 + float(np.random.normal(0, 1.0))
+            thd_pct += 1.0 + spike * 0.35 + float(np.random.normal(0, 0.5))
+            power_factor -= 0.03 + spike * 0.004 + float(np.random.normal(0, 0.006))
+            Va -= spike * 0.20
+            Vb += spike * 0.05
+            Vc -= spike * 0.12
+            Ia += spike * 0.55
+            Ib += spike * 0.15
+            Ic += spike * 0.45
+            reactive_power_kvar += spike * 0.35
+        elif transformer_id in DEGRADING_TRANSFORMERS:
+            # Backward-compatible mild degradation profile.
+            drift = min(timestep * 0.12, 20.0)
             oil_temp += drift + float(np.random.normal(0, 1.5))
             thd_pct += drift * 0.3 + float(np.random.normal(0, 0.8))
             power_factor -= drift * 0.005 + float(np.random.normal(0, 0.01))
@@ -162,9 +213,12 @@ class GridSimulator:
         active_power_kw = float(np.random.normal(2.5, 0.5))
         reactive_power_kvar = float(np.random.normal(0.8, 0.1))
         tamper_flag = False
+        consumption_drop_pct: float | None = None
 
-        if meter_id == THEFT_METER and timestep >= 50:
-            active_power_kw *= 0.10
+        if meter_id in THEFT_METERS and timestep >= THEFT_START_STEP:
+            baseline_kw = max(active_power_kw, 0.2)
+            active_power_kw *= 0.08
+            consumption_drop_pct = round((1.0 - (active_power_kw / baseline_kw)) * 100.0, 1)
             tamper_flag = True
 
         return {
@@ -174,7 +228,18 @@ class GridSimulator:
             "active_power_kw": active_power_kw,
             "reactive_power_kvar": reactive_power_kvar,
             "tamper_flag": tamper_flag,
+            "consumption_drop_pct": consumption_drop_pct,
         }
+
+    def _scenario_for(self, transformer_id: str) -> str:
+        """Return the synthetic scenario assigned to this transformer."""
+        if transformer_id in CRITICAL_TRANSFORMERS:
+            return "critical"
+        if transformer_id in WARNING_TRANSFORMERS:
+            return "warning"
+        if transformer_id in SPIKY_TRANSFORMERS:
+            return "spiky"
+        return "normal"
 
     def _on_connect(
         self,
@@ -234,6 +299,14 @@ class GridSimulator:
             N_TRANSFORMERS,
             METERS_PER_TRANSFORMER,
             PUBLISH_INTERVAL,
+        )
+        logger.info(
+            "Scenario mix: warning=%s | critical=%s | spiky=%s | theft_meters=%s | theft_start_step=%d",
+            sorted(WARNING_TRANSFORMERS),
+            sorted(CRITICAL_TRANSFORMERS),
+            sorted(SPIKY_TRANSFORMERS),
+            sorted(THEFT_METERS),
+            THEFT_START_STEP,
         )
         try:
             while True:

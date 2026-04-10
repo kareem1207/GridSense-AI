@@ -121,11 +121,11 @@ def get_all_meter_ids() -> list[str]:
 
 
 def get_theft_detections() -> list[dict]:
-    """Return meter readings with tamper_flag=True or consumption_drop_pct > 40."""
+    """Return the latest flagged reading per meter, newest first."""
     with _lock:
         result = []
         seen_meters: set[str] = set()
-        for r in STORE["meter_readings"]:
+        for r in reversed(STORE["meter_readings"]):
             mid = r.get("meter_id", "")
             if mid in seen_meters:
                 continue
